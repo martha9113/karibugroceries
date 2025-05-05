@@ -22,14 +22,23 @@
 
     const credits = ref<Credit[]>([])
     const loading = ref(false)
+    const error = ref<string | null>(null)
 
     const fetchCredits = async () => {
       loading.value = true
+      error.value = null
       try {
         const response = await api.get('/credit')
-        credits.value = response.data
+        console.log('Credits API Response:', response.data)
+        credits.value = response.data.filter((credit: Credit) => 
+          credit.produceId && credit.produceId.name && credit.produceId.type
+        )
+        console.log('Filtered credits:', credits.value)
       } catch (error: any) {
-        toast.error(error.response?.data?.message || 'Failed to fetch credit sales')
+        console.error('Error fetching credits:', error)
+        const errorMessage = error.response?.data?.message || 'Failed to fetch credit sales'
+        toast.error(errorMessage)
+        error.value = errorMessage
       } finally {
         loading.value = false
       }
@@ -63,6 +72,15 @@
           <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500"></div>
         </div>
 
+        <div v-else-if="error" class="text-center py-12 bg-white rounded-lg shadow">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-error-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <h3 class="mt-2 text-lg font-medium text-gray-900">Error Loading Credits</h3>
+          <p class="mt-1 text-gray-500">{{ error }}</p>
+          <button @click="fetchCredits" class="mt-4 btn btn-primary">Try Again</button>
+        </div>
+
         <div v-else-if="credits.length === 0" class="text-center py-12 bg-white rounded-lg shadow">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
@@ -87,7 +105,7 @@
             <tbody>
               <tr v-for="credit in credits" :key="credit._id" class="hover:bg-gray-100">
                 <td class="border px-4 py-2">{{ credit.buyerName }}</td>
-                <td class="border px-4 py-2">{{ credit.produceId.name }} - {{ credit.produceId.type }}</td>
+                <td class="border px-4 py-2">{{ credit.produceId?.name || 'N/A' }} - {{ credit.produceId?.type || 'N/A' }}</td>
                 <td class="border px-4 py-2">{{ credit.tonnage }}kg</td>
                 <td class="border px-4 py-2">{{ formatCurrency(credit.amountDue) }}</td>
                 <td class="border px-4 py-2">{{ new Date(credit.dueDate).toLocaleDateString() }}</td>

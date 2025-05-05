@@ -21,17 +21,23 @@
 
     const sales = ref<Sale[]>([])
     const loading = ref(false)
+    const error = ref<string | null>(null)
 
     const fetchSales = async () => {
       loading.value = true
+      error.value = null
       try {
         const response = await api.get('/sales')
         console.log('Sales API Response:', response.data)
-        sales.value = response.data
-        console.log('Sales after assignment:', sales.value)
+        sales.value = response.data.filter((sale: Sale) => 
+          sale.produceId && sale.produceId.name && sale.produceId.type
+        )
+        console.log('Filtered sales:', sales.value)
       } catch (error: any) {
         console.error('Error fetching sales:', error)
-        toast.error(error.response?.data?.message || 'Failed to fetch sales')
+        const errorMessage = error.response?.data?.message || 'Failed to fetch sales'
+        toast.error(errorMessage)
+        error.value = errorMessage
       } finally {
         loading.value = false
       }
@@ -65,6 +71,15 @@
           <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500"></div>
         </div>
 
+        <div v-else-if="error" class="text-center py-12 bg-white rounded-lg shadow">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-error-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <h3 class="mt-2 text-lg font-medium text-gray-900">Error Loading Sales</h3>
+          <p class="mt-1 text-gray-500">{{ error }}</p>
+          <button @click="fetchSales" class="mt-4 btn btn-primary">Try Again</button>
+        </div>
+
         <div v-else-if="sales.length === 0" class="text-center py-12 bg-white rounded-lg shadow">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
@@ -88,7 +103,7 @@
             <tbody>
               <tr v-for="sale in sales" :key="sale._id" class="hover:bg-gray-100">
                 <td class="border px-4 py-2">{{ sale.buyerName }}</td>
-                <td class="border px-4 py-2">{{ sale.produceId.name }} - {{ sale.produceId.type }}</td>
+                <td class="border px-4 py-2">{{ sale.produceId?.name || 'N/A' }} - {{ sale.produceId?.type || 'N/A' }}</td>
                 <td class="border px-4 py-2">{{ sale.tonnage }}kg</td>
                 <td class="border px-4 py-2">{{ formatCurrency(sale.amountPaid) }}</td>
                 <td class="border px-4 py-2">{{ new Date(sale.createdAt).toLocaleDateString() }}</td>
