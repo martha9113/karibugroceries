@@ -1,13 +1,100 @@
 <script setup lang="ts">
-// Component logic will go here
-</script>
+    import { ref, onMounted } from 'vue'
+    import api from '../../services/api'
+    import { useToast } from 'vue-toastification'
+    import { useRouter } from 'vue-router'
 
-<template>
-  <div>
-    <h1>Sales List</h1>
-  </div>
-</template>
+    interface Sale {
+      _id: string
+      buyerName: string
+      produceId: {
+        name: string
+        type: string
+      }
+      tonnage: number
+      amountPaid: number
+      createdAt: string
+    }
 
-<style scoped>
-/* Component styles will go here */
-</style>
+    const toast = useToast()
+    const router = useRouter()
+
+    const sales = ref<Sale[]>([])
+    const loading = ref(false)
+
+    const fetchSales = async () => {
+      loading.value = true
+      try {
+        const response = await api.get('/sales')
+        console.log('Sales API Response:', response.data)
+        sales.value = response.data
+        console.log('Sales after assignment:', sales.value)
+      } catch (error: any) {
+        console.error('Error fetching sales:', error)
+        toast.error(error.response?.data?.message || 'Failed to fetch sales')
+      } finally {
+        loading.value = false
+      }
+    }
+
+    onMounted(fetchSales)
+
+    // Format currency for display
+    const formatCurrency = (amount: number) => {
+      return new Intl.NumberFormat('en-UG', {
+        style: 'currency',
+        currency: 'UGX',
+        minimumFractionDigits: 0
+      }).format(amount)
+    }
+    </script>
+
+    <template>
+      <div>
+        <div class="flex justify-between items-center mb-6">
+          <h1 class="text-2xl font-bold text-gray-900">Sales List</h1>
+          <button @click="router.push('/sales/add')" class="btn btn-primary flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 011 1h-3v3a1 1 0 01-1 1H9v-3a1 1 0 01-1-1h3V6a1 1 0 011-1z" clip-rule="evenodd" />
+            </svg>
+            Record New Sale
+          </button>
+        </div>
+
+        <div v-if="loading" class="flex justify-center items-center h-64">
+          <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500"></div>
+        </div>
+
+        <div v-else-if="sales.length === 0" class="text-center py-12 bg-white rounded-lg shadow">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+          </svg>
+          <h3 class="mt-2 text-lg font-medium text-gray-900">No sales recorded yet</h3>
+          <p class="mt-1 text-gray-500">Start recording your sales to keep track of your business.</p>
+          <button @click="router.push('/sales/add')" class="mt-4 btn btn-primary">Record First Sale</button>
+        </div>
+
+        <div v-else class="overflow-x-auto">
+          <table class="table-auto w-full">
+            <thead>
+              <tr class="bg-gray-50">
+                <th class="px-4 py-2 text-left">Buyer Name</th>
+                <th class="px-4 py-2 text-left">Produce</th>
+                <th class="px-4 py-2 text-left">Quantity (kg)</th>
+                <th class="px-4 py-2 text-left">Amount Paid</th>
+                <th class="px-4 py-2 text-left">Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="sale in sales" :key="sale._id" class="hover:bg-gray-100">
+                <td class="border px-4 py-2">{{ sale.buyerName }}</td>
+                <td class="border px-4 py-2">{{ sale.produceId.name }} - {{ sale.produceId.type }}</td>
+                <td class="border px-4 py-2">{{ sale.tonnage }}kg</td>
+                <td class="border px-4 py-2">{{ formatCurrency(sale.amountPaid) }}</td>
+                <td class="border px-4 py-2">{{ new Date(sale.createdAt).toLocaleDateString() }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </template>

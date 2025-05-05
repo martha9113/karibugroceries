@@ -5,6 +5,14 @@ import api from '../../services/api'
 import { useToast } from 'vue-toastification'
 import { useRouter, useRoute } from 'vue-router'
 
+interface Produce {
+  _id: string
+  name: string
+  type: string
+  currentStock: number
+  sellingPrice: number
+}
+
 const toast = useToast()
 const router = useRouter()
 const route = useRoute()
@@ -18,8 +26,8 @@ const formData = ref({
   buyerName: ''
 })
 
-const produceList = ref([])
-const selectedProduce = ref<any>(null)
+const produceList = ref<Produce[]>([])
+const selectedProduce = ref<Produce | null>(null)
 const loading = ref(false)
 const fetchingProduce = ref(true)
 const errors = ref<Record<string, string>>({})
