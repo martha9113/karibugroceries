@@ -7,7 +7,7 @@
     interface Credit {
       _id: string
       buyerName: string
-      produceId: {
+      produce: {
         name: string
         type: string
       }
@@ -15,6 +15,8 @@
       amountDue: number
       dueDate: string
       createdAt: string
+      status: string
+      amountPaid: number
     }
 
     const toast = useToast()
@@ -28,14 +30,33 @@
       loading.value = true
       error.value = null
       try {
+        console.log('Fetching credits...')
         const response = await api.get('/credit')
-        console.log('Credits API Response:', response.data)
-        credits.value = response.data.filter((credit: Credit) => 
-          credit.produceId && credit.produceId.name && credit.produceId.type
-        )
-        console.log('Filtered credits:', credits.value)
+        console.log('Raw API Response:', response)
+        console.log('Credits API Response Data:', response.data)
+        
+        if (!response.data || !Array.isArray(response.data)) {
+          console.error('Invalid response format:', response.data)
+          error.value = 'Invalid data format received from server'
+          return
+        }
+
+        credits.value = response.data.filter((credit: Credit) => {
+          const isValid = credit.produce && credit.produce.name && credit.produce.type
+          if (!isValid) {
+            console.log('Filtered out invalid credit:', credit)
+          }
+          return isValid
+        })
+        
+        console.log('Final filtered credits:', credits.value)
       } catch (error: any) {
         console.error('Error fetching credits:', error)
+        console.error('Error details:', {
+          message: error.message,
+          response: error.response,
+          status: error.response?.status
+        })
         const errorMessage = error.response?.data?.message || 'Failed to fetch credit sales'
         toast.error(errorMessage)
         error.value = errorMessage
@@ -105,7 +126,7 @@
             <tbody>
               <tr v-for="credit in credits" :key="credit._id" class="hover:bg-gray-100">
                 <td class="border px-4 py-2">{{ credit.buyerName }}</td>
-                <td class="border px-4 py-2">{{ credit.produceId?.name || 'N/A' }} - {{ credit.produceId?.type || 'N/A' }}</td>
+                <td class="border px-4 py-2">{{ credit.produce.name }} - {{ credit.produce.type }}</td>
                 <td class="border px-4 py-2">{{ credit.tonnage }}kg</td>
                 <td class="border px-4 py-2">{{ formatCurrency(credit.amountDue) }}</td>
                 <td class="border px-4 py-2">{{ new Date(credit.dueDate).toLocaleDateString() }}</td>
