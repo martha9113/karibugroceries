@@ -184,3 +184,38 @@ export const getRecentSales = async (req, res) => {
     res.status(500).json({ message: error.message || 'Server error' });
   }
 };
+
+// @desc    Delete sale
+// @route   DELETE /api/sales/:id
+// @access  Private/Manager
+export const deleteSale = async (req, res) => {
+  try {
+    const sale = await Sale.findById(req.params.id)
+      .populate('produce');
+    
+    if (!sale) {
+      return res.status(404).json({ message: 'Sale not found' });
+    }
+    
+    // Check if user is authorized to delete the sale
+    if (req.user.role !== 'director' && sale.branch !== req.user.branch) {
+      return res.status(403).json({ 
+        message: 'Not authorized to delete sales from other branches' 
+      });
+    }
+
+    // Restore the stock
+    const produce = await Produce.findById(sale.produce._id);
+    if (produce) {
+      produce.currentStock += sale.tonnage;
+      await produce.save();
+    }
+
+    // Delete the sale
+    await sale.deleteOne();
+    
+    res.json({ message: 'Sale removed and stock restored' });
+  } catch (error) {
+    res.status(500).json({ message: error.message || 'Server error' });
+  }
+};

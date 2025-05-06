@@ -171,3 +171,29 @@ export const getLowStockAlerts = async (req, res) => {
     res.status(500).json({ message: error.message || 'Server error' });
   }
 };
+
+// @desc    Delete produce
+// @route   DELETE /api/produce/:id
+// @access  Private/Manager
+export const deleteProduce = async (req, res) => {
+  try {
+    const produce = await Produce.findById(req.params.id);
+    
+    if (!produce) {
+      return res.status(404).json({ message: 'Produce not found' });
+    }
+    
+    // Check if manager is from the same branch as the produce
+    if (produce.branch !== req.user.branch) {
+      return res.status(403).json({ 
+        message: 'Not authorized to delete produce from other branches' 
+      });
+    }
+
+    await produce.deleteOne();
+    
+    res.json({ message: 'Produce removed' });
+  } catch (error) {
+    res.status(500).json({ message: error.message || 'Server error' });
+  }
+};

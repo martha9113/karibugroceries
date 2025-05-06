@@ -175,3 +175,38 @@ export const getOverdueCreditSales = async (req, res) => {
     res.status(500).json({ message: error.message || 'Server error' });
   }
 };
+
+// @desc    Delete credit sale
+// @route   DELETE /api/credit/:id
+// @access  Private/Manager
+export const deleteCreditSale = async (req, res) => {
+  try {
+    const creditSale = await Credit.findById(req.params.id)
+      .populate('produce');
+    
+    if (!creditSale) {
+      return res.status(404).json({ message: 'Credit sale not found' });
+    }
+    
+    // Check if user is authorized to delete the credit sale
+    if (req.user.role !== 'director' && creditSale.branch !== req.user.branch) {
+      return res.status(403).json({ 
+        message: 'Not authorized to delete credit sales from other branches' 
+      });
+    }
+
+    // Restore the stock
+    const produce = await Produce.findById(creditSale.produce._id);
+    if (produce) {
+      produce.currentStock += creditSale.tonnage;
+      await produce.save();
+    }
+
+    // Delete the credit sale
+    await creditSale.deleteOne();
+    
+    res.json({ message: 'Credit sale removed and stock restored' });
+  } catch (error) {
+    res.status(500).json({ message: error.message || 'Server error' });
+  }
+};

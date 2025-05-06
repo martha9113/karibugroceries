@@ -3,6 +3,7 @@
     import api from '../../services/api'
     import { useToast } from 'vue-toastification'
     import { useRouter } from 'vue-router'
+    import { useAuthStore } from '../../stores/auth'
 
     interface Credit {
       _id: string
@@ -17,14 +18,18 @@
       createdAt: string
       status: string
       amountPaid: number
+      branch: string
     }
 
     const toast = useToast()
     const router = useRouter()
+    const authStore = useAuthStore()
+    const isDirector = ref(authStore.user?.role === 'director')
 
     const credits = ref<Credit[]>([])
     const loading = ref(false)
     const error = ref<string | null>(null)
+    const deletingId = ref('')
 
     const fetchCredits = async () => {
       loading.value = true
@@ -62,6 +67,24 @@
         error.value = errorMessage
       } finally {
         loading.value = false
+      }
+    }
+
+    // Delete credit sale
+    const deleteCreditSale = async (id: string) => {
+      if (!confirm('Are you sure you want to delete this credit sale? This will restore the stock and cannot be undone.')) {
+        return
+      }
+
+      deletingId.value = id
+      try {
+        await api.delete(`/credit/${id}`)
+        toast.success('Credit sale deleted successfully and stock restored')
+        credits.value = credits.value.filter(c => c._id !== id)
+      } catch (err: any) {
+        toast.error(err.response?.data?.message || 'Failed to delete credit sale')
+      } finally {
+        deletingId.value = ''
       }
     }
 
@@ -121,6 +144,7 @@
                 <th class="px-4 py-2 text-left">Amount Due</th>
                 <th class="px-4 py-2 text-left">Due Date</th>
                 <th class="px-4 py-2 text-left">Date</th>
+                <th class="px-4 py-2 text-left">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -131,6 +155,17 @@
                 <td class="border px-4 py-2">{{ formatCurrency(credit.amountDue) }}</td>
                 <td class="border px-4 py-2">{{ new Date(credit.dueDate).toLocaleDateString() }}</td>
                 <td class="border px-4 py-2">{{ new Date(credit.createdAt).toLocaleDateString() }}</td>
+                <td class="border px-4 py-2">
+                  <button 
+                    v-if="isDirector"
+                    @click="deleteCreditSale(credit._id)" 
+                    class="text-error-600 hover:text-error-900"
+                    :disabled="deletingId === credit._id"
+                  >
+                    <span v-if="deletingId === credit._id">Deleting...</span>
+                    <span v-else>Delete</span>
+                  </button>
+                </td>
               </tr>
             </tbody>
           </table>

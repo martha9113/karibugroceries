@@ -5,7 +5,8 @@ import {
   getProduceById,
   updateProduceStock,
   updateProducePrice,
-  getLowStockAlerts
+  getLowStockAlerts,
+  deleteProduce
 } from '../controllers/produceController.js';
 import { protect, authorize } from '../middleware/authMiddleware.js';
 
@@ -17,5 +18,6 @@ router.get('/alerts/low-stock', protect, authorize('manager', 'director'), getLo
 router.get('/:id', protect, getProduceById);
 router.put('/:id/stock', protect, authorize('manager', 'director'), updateProduceStock);
 router.put('/:id/price', protect, authorize('manager', 'director'), updateProducePrice);
+router.delete('/:id', protect, authorize('director'), deleteProduce);
 
 export default router;

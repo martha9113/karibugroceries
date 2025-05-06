@@ -3,7 +3,8 @@ import {
   addCreditSale,
   getCreditSales,
   updateCreditPayment,
-  getOverdueCreditSales
+  getOverdueCreditSales,
+  deleteCreditSale
 } from '../controllers/creditController.js';
 import { protect, authorize } from '../middleware/authMiddleware.js';
 
@@ -13,5 +14,6 @@ router.post('/', protect, addCreditSale);
 router.get('/', protect, getCreditSales);
 router.get('/overdue', protect, getOverdueCreditSales);
 router.put('/:id/payment', protect, updateCreditPayment);
+router.delete('/:id', protect, authorize('director'), deleteCreditSale);
 
 export default router;

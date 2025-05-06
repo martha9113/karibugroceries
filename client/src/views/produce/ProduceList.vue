@@ -5,14 +5,37 @@ import api from '../../services/api'
 import { useToast } from 'vue-toastification'
 import { useRouter } from 'vue-router'
 
+interface Produce {
+  _id: string
+  name: string
+  type: string
+  currentStock: number
+  sellingPrice: number
+  branch: string
+  tonnage: number
+  cost: number
+  dealer: string
+  dealerContact: string
+  source: string
+  manager: {
+    _id: string
+    name: string
+    email: string
+  }
+  createdAt: string
+  updatedAt: string
+}
+
 const toast = useToast()
 const router = useRouter()
 const authStore = useAuthStore()
 const isManager = ref(authStore.user?.role === 'manager' || authStore.user?.role === 'director')
+const isDirector = ref(authStore.user?.role === 'director')
 
-const produces = ref([])
+const produces = ref<Produce[]>([])
 const loading = ref(true)
 const error = ref('')
+const deletingId = ref('')
 
 // Fetch all produce
 const fetchProduce = async () => {
@@ -47,6 +70,24 @@ const goToAddProduce = () => {
 // View produce details
 const viewProduceDetails = (id: string) => {
   router.push(`/produce/${id}`)
+}
+
+// Delete produce
+const deleteProduce = async (id: string) => {
+  if (!confirm('Are you sure you want to delete this produce? This action cannot be undone.')) {
+    return
+  }
+
+  deletingId.value = id
+  try {
+    await api.delete(`/produce/${id}`)
+    toast.success('Produce deleted successfully')
+    produces.value = produces.value.filter(p => p._id !== id)
+  } catch (err: any) {
+    toast.error(err.response?.data?.message || 'Failed to delete produce')
+  } finally {
+    deletingId.value = ''
+  }
 }
 </script>
 
@@ -170,6 +211,15 @@ const viewProduceDetails = (id: string) => {
                   class="text-primary-600 hover:text-primary-900 mr-3"
                 >
                   View
+                </button>
+                <button 
+                  v-if="isDirector"
+                  @click="deleteProduce(produce._id)" 
+                  class="text-error-600 hover:text-error-900"
+                  :disabled="deletingId === produce._id"
+                >
+                  <span v-if="deletingId === produce._id">Deleting...</span>
+                  <span v-else>Delete</span>
                 </button>
               </td>
             </tr>

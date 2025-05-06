@@ -3,6 +3,7 @@
     import api from '../../services/api'
     import { useToast } from 'vue-toastification'
     import { useRouter } from 'vue-router'
+    import { useAuthStore } from '../../stores/auth'
 
     interface Sale {
       _id: string
@@ -14,14 +15,18 @@
       tonnage: number
       amountPaid: number
       createdAt: string
+      branch: string
     }
 
     const toast = useToast()
     const router = useRouter()
+    const authStore = useAuthStore()
+    const isDirector = ref(authStore.user?.role === 'director')
 
     const sales = ref<Sale[]>([])
     const loading = ref(false)
     const error = ref<string | null>(null)
+    const deletingId = ref('')
 
     const fetchSales = async () => {
       loading.value = true
@@ -59,6 +64,24 @@
         error.value = errorMessage
       } finally {
         loading.value = false
+      }
+    }
+
+    // Delete sale
+    const deleteSale = async (id: string) => {
+      if (!confirm('Are you sure you want to delete this sale? This will restore the stock and cannot be undone.')) {
+        return
+      }
+
+      deletingId.value = id
+      try {
+        await api.delete(`/sales/${id}`)
+        toast.success('Sale deleted successfully and stock restored')
+        sales.value = sales.value.filter(s => s._id !== id)
+      } catch (err: any) {
+        toast.error(err.response?.data?.message || 'Failed to delete sale')
+      } finally {
+        deletingId.value = ''
       }
     }
 
@@ -117,6 +140,7 @@
                 <th class="px-4 py-2 text-left">Quantity (kg)</th>
                 <th class="px-4 py-2 text-left">Amount Paid</th>
                 <th class="px-4 py-2 text-left">Date</th>
+                <th class="px-4 py-2 text-left">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -126,6 +150,17 @@
                 <td class="border px-4 py-2">{{ sale.tonnage }}kg</td>
                 <td class="border px-4 py-2">{{ formatCurrency(sale.amountPaid) }}</td>
                 <td class="border px-4 py-2">{{ new Date(sale.createdAt).toLocaleDateString() }}</td>
+                <td class="border px-4 py-2">
+                  <button 
+                    v-if="isDirector"
+                    @click="deleteSale(sale._id)" 
+                    class="text-error-600 hover:text-error-900"
+                    :disabled="deletingId === sale._id"
+                  >
+                    <span v-if="deletingId === sale._id">Deleting...</span>
+                    <span v-else>Delete</span>
+                  </button>
+                </td>
               </tr>
             </tbody>
           </table>
